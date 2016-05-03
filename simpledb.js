@@ -140,7 +140,11 @@ var handleCommit = function() {
         console.log(ERROR_DICT[2]);
         return;
     }
- 
+    
+    commit();
+};
+
+var commit = function() {
     // iterate through transactions and set all values
     _.each(transactions, function(tempDict) {
         _.each(tempDict, function(val, key) {
@@ -161,6 +165,11 @@ var handleSet = function(args) {
  
     var name = args[0];
     var value = args[1];
+    
+    set(name, value);
+};
+
+var set = function(name, value) {
     var currentDatabase = getCurrentDatabase();
     var currentDatabaseIndex = getCurrentDatabaseIndex();
     var oldValue = currentDatabase[name];
@@ -176,7 +185,7 @@ var handleSet = function(args) {
         currentDatabaseIndex[value] = {};
      
     currentDatabaseIndex[value][name] = true;
-};
+}
  
 var handleGet = function(args) {
     if (args.length < 1) {
@@ -185,8 +194,14 @@ var handleGet = function(args) {
     }
  
     var name = args[0];
+
+    return get(name);
+};
+
+var get = function(name) {
     var currentDatabase = getCurrentDatabase();
     var val = currentDatabase[name] ? currentDatabase[name] : 'NULL';
+
     return val;
 };
  
@@ -197,6 +212,11 @@ var handleUnset = function(args) {
     }
  
     var name = args[0];
+
+    unset(name);
+};
+
+var unset = function(name) {
     var currentDatabase = getCurrentDatabase();
     var currentDatabaseIndex = getCurrentDatabaseIndex();
      
@@ -206,8 +226,8 @@ var handleUnset = function(args) {
     if (currentDatabaseIndex[oldValue])
         delete currentDatabaseIndex[oldValue][name];
  
-    // remove variable from database
-    delete currentDatabase[name];
+    // set variable to null to keep track of removal
+    currentDatabase[name] = null;
 };
  
 var handleNumequalto = function(args) {
