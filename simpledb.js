@@ -115,9 +115,8 @@ Command Handlers
  */
  
 var handleBegin = function() {
-    // clone database to carry over state to next level of transaction
-    var lastDatabase = clone(getCurrentDatabase());
-    transactions.push(lastDatabase);
+    // create new database
+    transactions.push({});
  
     // clone database index to carry over state to next level of transaction
     var lastDatabaseIndex = clone(getCurrentDatabaseIndex());
@@ -200,9 +199,21 @@ var handleGet = function(args) {
 
 var get = function(name) {
     var currentDatabase = getCurrentDatabase();
-    var val = currentDatabase[name] ? currentDatabase[name] : 'NULL';
+    var lastValue = getLastDatabaseValue(name);
+    var val =  lastValue ? lastValue : 'NULL';
 
     return val;
+};
+
+// find last database with this key
+var getLastDatabaseValue = function(key) {
+    for (var i=transactions.length-1; i >= 0; i--) {
+        var db = transactions[i];
+        if (db[key])
+            return db[key];
+    }
+
+    return null;
 };
  
 var handleUnset = function(args) {
