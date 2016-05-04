@@ -6,7 +6,10 @@ Derek Tia
  */
  
 var _ = require('underscore');
- 
+
+/***************
+Global Variables
+****************/ 
 var database; // main database
 var numEqualToMap; // reverse number mapping to ensure at most log(n) performance for NUMEQUALTO
 var transactions; // transactions are stored here
@@ -17,6 +20,10 @@ var ERROR_DICT = {
     1: 'Not enough arguments. Please try again.',
     2: 'NO TRANSACTION'
 };
+
+/****
+Main
+*****/
  
 var main = function() {
     initialize();
