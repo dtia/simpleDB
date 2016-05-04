@@ -2,17 +2,16 @@
 Thumbtack Coding Challenge
 Simple Database
 Derek Tia
-5/1/16
+5/4/16
  */
  
 var _ = require('underscore');
 var readline = require('readline');
 var rl;
  
-var database = {}; // main database
-var databaseIndex = {}; // reverse index database to ensure at most log(n) performance for NUMEQUALTO
-var transactions = [database]; // keeps track of the database at different levels of transactions
-var databaseIndices = [databaseIndex]; // corresponding reverse index for each level
+var database; // main database
+var numEqualToMap; // reverse number mapping to ensure at most log(n) performance for NUMEQUALTO
+var transactions; // transactions get pushed into this array
  
 // error message dictionary to ensure consistent error messages
 var ERROR_DICT = {
@@ -26,6 +25,8 @@ var main = function() {
     console.log('To quit the program at any time, just enter END');
     console.log('Please enter a command to get started:\n');
  
+    initialize();
+
     rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -35,6 +36,12 @@ var main = function() {
     rl.on('line', function(line){
         processLine(line);
     });
+};
+
+var initialize = function() {
+    database = {};
+    numEqualToMap = {};
+    transactions = [];
 };
  
 // routes a command to its handler
@@ -85,53 +92,22 @@ var processLine = function(line) {
 };
  
 /*
-Helper Functions
- */
- 
-// currently output is sent to stdout, 
-// but can be modified later to be 
-// written to a file for example
-var processOutput = function(value) {
-    console.log(value);
-};
- 
-// deep clone a dictionary
-var clone = function(dictionary) {
-    return JSON.parse(JSON.stringify(dictionary));
-};
- 
-// get database from the deepest level
-var getCurrentDatabase = function() {
-    return _.last(transactions);
-};
- 
-// get database index from the deepest level
-var getCurrentDatabaseIndex = function() {
-    return _.last(databaseIndices);
-};
- 
-/*
 Command Handlers
  */
  
 var handleBegin = function() {
-    // create new database
-    transactions.push({});
- 
-    // clone database index to carry over state to next level of transaction
-    var lastDatabaseIndex = clone(getCurrentDatabaseIndex());
-    databaseIndices.push(lastDatabaseIndex);
+    // create new Transaction object
+    transactions.push(new Transaction());
 };
  
 var handleRollback = function() {
-    if (transactions.length <= 1) {
+    if (transactions.length < 1) {
         console.log(ERROR_DICT[2]);
         return;
     }
      
-    // remove transaction and index from list
+    // remove Transaction object from list
     transactions.pop();
-    databaseIndices.pop();
 };
  
 var handleCommit = function() {
@@ -140,20 +116,7 @@ var handleCommit = function() {
         return;
     }
     
-    commit();
-};
-
-var commit = function() {
-    // iterate through transactions and set all values
-    _.each(transactions, function(tempDict) {
-        _.each(tempDict, function(val, key) {
-            database[key] = val;
-        });
-    });
- 
-    // base state transaction contains the original database
-    transactions = [database];
-    databaseIndices = [databaseIndex];
+    return commit();
 };
  
 var handleSet = function(args) {
@@ -165,27 +128,20 @@ var handleSet = function(args) {
     var name = args[0];
     var value = args[1];
     
-    set(name, value);
+    return set(name, value);
 };
 
-var set = function(name, value) {
-    var currentDatabase = getCurrentDatabase();
-    var currentDatabaseIndex = getCurrentDatabaseIndex();
-    var oldValue = currentDatabase[name];
- 
-    currentDatabase[name] = value;
- 
-    // update index for a variable that is reassigned a value
-    if (oldValue && currentDatabaseIndex[oldValue]) {
-        delete currentDatabaseIndex[oldValue][name];
+var handleUnset = function(args) {
+    if (args.length < 1) {
+        console.log(ERROR_DICT[1]);
+        return;
     }
  
-    if (!currentDatabaseIndex[value])
-        currentDatabaseIndex[value] = {};
-     
-    currentDatabaseIndex[value][name] = true;
-}
- 
+    var name = args[0];
+
+    return unset(name);
+};
+
 var handleGet = function(args) {
     if (args.length < 1) {
         console.log(ERROR_DICT[1]);
@@ -197,50 +153,6 @@ var handleGet = function(args) {
     return get(name);
 };
 
-var get = function(name) {
-    var currentDatabase = getCurrentDatabase();
-    var lastValue = getLastDatabaseValue(name);
-    var val =  lastValue ? lastValue : 'NULL';
-
-    return val;
-};
-
-// find last database with this key
-var getLastDatabaseValue = function(key) {
-    for (var i=transactions.length-1; i >= 0; i--) {
-        var db = transactions[i];
-        if (db[key])
-            return db[key];
-    }
-
-    return null;
-};
- 
-var handleUnset = function(args) {
-    if (args.length < 1) {
-        console.log(ERROR_DICT[1]);
-        return;
-    }
- 
-    var name = args[0];
-
-    unset(name);
-};
-
-var unset = function(name) {
-    var currentDatabase = getCurrentDatabase();
-    var currentDatabaseIndex = getCurrentDatabaseIndex();
-     
-    var oldValue = currentDatabase[name];
- 
-    // remove index for this variable
-    if (currentDatabaseIndex[oldValue])
-        delete currentDatabaseIndex[oldValue][name];
- 
-    // set variable to null to keep track of removal
-    currentDatabase[name] = null;
-};
- 
 var handleNumequalto = function(args) {
     if (args.length < 1) {
         console.log(ERROR_DICT[1]);
@@ -248,10 +160,122 @@ var handleNumequalto = function(args) {
     }
  
     var val = args[0];
-    var currentDatabase = getCurrentDatabase();
-    var currentDatabaseIndex = getCurrentDatabaseIndex();
+    var lastNumEqualTo = getLastNumEqualTo(val);
  
-    return currentDatabaseIndex[val] ? _.keys(currentDatabaseIndex[val]).length : 0;
+    return lastNumEqualTo ? lastNumEqualTo : 0;
 };
+
+/*
+Helper Functions
+ */
+ 
+// currently output is sent to stdout, 
+// but can be modified later to be 
+// written to a file for example
+var processOutput = function(value) {
+    console.log(value);
+};
+ 
+// get most recent database
+// default to global database
+var getCurrentDatabase = function() {
+    if (transactions.length)
+        return _.last(transactions).db;
+
+    return database;
+};
+ 
+// get most recent numequalto map
+// default to global database
+var getCurrentNumEqualToMap = function() {
+    if (transactions.length)
+        return _.last(transactions).numEqualToMap;
+    
+    return numEqualToMap;
+};
+
+// find last database with this name
+var getLastDatabaseValue = function(name) {
+    for (var i=transactions.length-1; i >= 0; i--) {
+        var db = transactions[i].db;
+        if (db[name])
+            return db[name];
+    }
+
+    return database[name] || null;
+};
+
+// find last mapping from this number
+var getLastNumEqualTo = function(num) {
+    for (var i=transactions.length-1; i >= 0; i--) {
+        var transactionalNumEqualToMap = transactions[i].numEqualToMap;
+        if (_.isNumber(transactionalNumEqualToMap[num])) {
+            return transactionalNumEqualToMap[num];
+        }
+    }
+
+    return numEqualToMap[num] || 0;
+};
+
+// Class functions
+
+var get = function(name) {
+    var lastValue = getLastDatabaseValue(name);
+    var val =  lastValue && lastValue !== 'removed' ? lastValue : 'NULL';
+
+    return val;
+};
+
+var set = function(name, value) {
+    var currentDatabase = getCurrentDatabase();
+    var currentNumEqualToMap = getCurrentNumEqualToMap();
+    var oldValue = currentDatabase[name];
+ 
+    currentDatabase[name] = value;
+
+    if (currentNumEqualToMap[value])
+        currentNumEqualToMap++;
+    else
+        currentNumEqualToMap[value] = 1;
+ 
+    // update index for a variable that is reassigned a value
+    if (oldValue && currentNumEqualToMap[oldValue]) {
+        currentNumEqualToMap[oldValue]--;
+    }
+};
+
+var unset = function(name) {
+    var currentDatabase = getCurrentDatabase();
+    var currentNumEqualToMap = getCurrentNumEqualToMap();     
+    var oldValue = currentDatabase[name] || getLastDatabaseValue(name);
+ 
+    // decrement count for this variable
+    if (currentNumEqualToMap[oldValue])
+        currentNumEqualToMap[oldValue]--; //TODO: check for negatives
+    else
+        currentNumEqualToMap[oldValue] = 0;
+ 
+    // set variable to null to keep track of removal
+    currentDatabase[name] = 'removed';
+};
+
+var commit = function() {
+    // iterate through transactions and set all values
+    _.each(transactions, function(transactionObject) {
+        _.each(transactionObject.db, function(val, key) {
+            database[key] = val;
+        });
+    });
+ 
+    // clear transactions
+    transactions = [];
+};
+
+
+function Transaction() {
+    this.db = {};
+    this.numEqualToMap = {};
+}
+
  
 main();
