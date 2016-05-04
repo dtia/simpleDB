@@ -6,8 +6,6 @@ Derek Tia
  */
  
 var _ = require('underscore');
-var readline = require('readline');
-var rl;
  
 var database; // main database
 var numEqualToMap; // reverse number mapping to ensure at most log(n) performance for NUMEQUALTO
@@ -23,32 +21,19 @@ var ERROR_DICT = {
 var main = function() {
     initialize();
 
-    // Local test input
-    rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
+    process.stdin.resume();
+    process.stdin.setEncoding("ascii");
+    var input = "";
+    process.stdin.on("data", function (chunk) {
+        input += chunk;
     });
- 
-    // standard input handler
-    rl.on('line', function(line){
-        processLine(line);
+    process.stdin.on("end", function () {
+        var input_arr = input.split("\n");
+        for (var i=0; i < input_arr.length; i++) {
+            var line = input_arr[i];
+            processLine(line);
+        }
     });
-
-
-    // HACKERRANK INPUT
-    // process.stdin.resume();
-    // process.stdin.setEncoding("ascii");
-    // var input = "";
-    // process.stdin.on("data", function (chunk) {
-    //     input += chunk;
-    // });
-    // process.stdin.on("end", function () {
-    //     var input_arr = input.split("\n");
-    //     for (var i=0; i < input_arr.length; i++) {
-    //         var line = input_arr[i];
-    //         processLine(line);
-    //     }
-    // });
 };
 
 var initialize = function() {
@@ -187,11 +172,7 @@ Helper Functions
 // but can be modified later to be 
 // written to a file for example
 var processOutput = function(value) {
-    // Local Output
-    console.log(value);
-
-    // Hackerrank Output
-    // process.stdout.write(value + "\n");
+    process.stdout.write(value + "\n");
 };
  
 // get most recent database
@@ -227,6 +208,7 @@ var getLastDatabaseValue = function(name) {
 var getLastNumEqualTo = function(num) {
     for (var i=transactions.length-1; i >= 0; i--) {
         var transactionalNumEqualToMap = transactions[i].numEqualToMap;
+        // _.isNumber() to detect for 0 values
         if (_.isNumber(transactionalNumEqualToMap[num])) {
             return transactionalNumEqualToMap[num];
         }
@@ -274,7 +256,7 @@ var unset = function(name) {
     else if (lastValue)
         currentNumEqualToMap[lastValue] = 0;
  
-    // set variable to 'removed' to keep track of removal
+    // set variable to 'removed' to keep track of removed name
     // especially in open transactions
     currentDatabase[name] = 'removed';
 };
@@ -297,6 +279,5 @@ function Transaction() {
     this.db = {};
     this.numEqualToMap = {};
 }
-
  
 main();
