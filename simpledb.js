@@ -11,7 +11,7 @@ var rl;
  
 var database; // main database
 var numEqualToMap; // reverse number mapping to ensure at most log(n) performance for NUMEQUALTO
-var transactions; // transactions get pushed into this array
+var transactions; // transactions are stored here
  
 // error message dictionary to ensure consistent error messages
 var ERROR_DICT = {
@@ -69,7 +69,7 @@ var processLine = function(line) {
             break;
  
         case 'GET':
-            processOutput(handleGet(args));
+            handleGet(args);
             break;
  
         case 'UNSET':
@@ -77,7 +77,7 @@ var processLine = function(line) {
             break;
  
         case 'NUMEQUALTO':
-            processOutput(handleNumequalto(args));
+            handleNumequalto(args);
             break;
  
         case 'END':
@@ -150,7 +150,7 @@ var handleGet = function(args) {
  
     var name = args[0];
 
-    return get(name);
+    return processOutput(get(name));
 };
 
 var handleNumequalto = function(args) {
@@ -161,8 +161,9 @@ var handleNumequalto = function(args) {
  
     var val = args[0];
     var lastNumEqualTo = getLastNumEqualTo(val);
- 
-    return lastNumEqualTo ? lastNumEqualTo : 0;
+    lastNumEqualTo = lastNumEqualTo ? lastNumEqualTo : 0;
+
+    return processOutput(lastNumEqualTo);
 };
 
 /***************
@@ -238,7 +239,7 @@ var set = function(name, value) {
     else
         currentNumEqualToMap[value] = 1;
  
-    // update index for a variable that is reassigned a value
+    // update numequaltomap for a variable that is reassigned a value
     if (lastValue && currentNumEqualToMap[lastValue]) {
         currentNumEqualToMap[lastValue]--;
     }
@@ -251,13 +252,13 @@ var unset = function(name) {
     var currentNumEqualToMap = getCurrentNumEqualToMap();     
     var lastValue = getLastDatabaseValue(name);
  
-    // decrement count for this variable
     if (lastValue && currentNumEqualToMap[lastValue])
         currentNumEqualToMap[lastValue]--;
     else if (lastValue)
         currentNumEqualToMap[lastValue] = 0;
  
-    // set variable to null to keep track of removal
+    // set variable to 'removed' to keep track of removal
+    // especially in open transactions
     currentDatabase[name] = 'removed';
 };
 
@@ -274,6 +275,7 @@ var commit = function() {
 };
 
 
+// simple transaction object
 function Transaction() {
     this.db = {};
     this.numEqualToMap = {};
