@@ -91,9 +91,9 @@ var processLine = function(line) {
     }
 };
  
-/*
+/***************
 Command Handlers
- */
+****************/
  
 var handleBegin = function() {
     // create new Transaction object
@@ -165,9 +165,9 @@ var handleNumequalto = function(args) {
     return lastNumEqualTo ? lastNumEqualTo : 0;
 };
 
-/*
+/***************
 Helper Functions
- */
+****************/
  
 // currently output is sent to stdout, 
 // but can be modified later to be 
@@ -202,7 +202,7 @@ var getLastDatabaseValue = function(name) {
             return db[name];
     }
 
-    return database[name] || null;
+    return database[name];
 };
 
 // find last mapping from this number
@@ -214,10 +214,12 @@ var getLastNumEqualTo = function(num) {
         }
     }
 
-    return numEqualToMap[num] || 0;
+    return numEqualToMap[num];
 };
 
-// Class functions
+/***************
+Command Functions
+****************/
 
 var get = function(name) {
     var lastValue = getLastDatabaseValue(name);
@@ -229,31 +231,31 @@ var get = function(name) {
 var set = function(name, value) {
     var currentDatabase = getCurrentDatabase();
     var currentNumEqualToMap = getCurrentNumEqualToMap();
-    var oldValue = currentDatabase[name];
+    var lastValue = getLastDatabaseValue(name);
  
-    currentDatabase[name] = value;
-
     if (currentNumEqualToMap[value])
-        currentNumEqualToMap++;
+        currentNumEqualToMap[value]++;
     else
         currentNumEqualToMap[value] = 1;
  
     // update index for a variable that is reassigned a value
-    if (oldValue && currentNumEqualToMap[oldValue]) {
-        currentNumEqualToMap[oldValue]--;
+    if (lastValue && currentNumEqualToMap[lastValue]) {
+        currentNumEqualToMap[lastValue]--;
     }
+
+    currentDatabase[name] = value;
 };
 
 var unset = function(name) {
     var currentDatabase = getCurrentDatabase();
     var currentNumEqualToMap = getCurrentNumEqualToMap();     
-    var oldValue = currentDatabase[name] || getLastDatabaseValue(name);
+    var lastValue = getLastDatabaseValue(name);
  
     // decrement count for this variable
-    if (currentNumEqualToMap[oldValue])
-        currentNumEqualToMap[oldValue]--; //TODO: check for negatives
-    else
-        currentNumEqualToMap[oldValue] = 0;
+    if (lastValue && currentNumEqualToMap[lastValue])
+        currentNumEqualToMap[lastValue]--;
+    else if (lastValue)
+        currentNumEqualToMap[lastValue] = 0;
  
     // set variable to null to keep track of removal
     currentDatabase[name] = 'removed';
