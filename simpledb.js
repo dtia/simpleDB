@@ -21,12 +21,9 @@ var ERROR_DICT = {
 };
  
 var main = function() {
-    console.log('\nWelcome to Derek\'s Simple Database program!');
-    console.log('To quit the program at any time, just enter END');
-    console.log('Please enter a command to get started:\n');
- 
     initialize();
 
+    // Local test input
     rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -36,6 +33,22 @@ var main = function() {
     rl.on('line', function(line){
         processLine(line);
     });
+
+
+    // HACKERRANK INPUT
+    // process.stdin.resume();
+    // process.stdin.setEncoding("ascii");
+    // var input = "";
+    // process.stdin.on("data", function (chunk) {
+    //     input += chunk;
+    // });
+    // process.stdin.on("end", function () {
+    //     var input_arr = input.split("\n");
+    //     for (var i=0; i < input_arr.length; i++) {
+    //         var line = input_arr[i];
+    //         processLine(line);
+    //     }
+    // });
 };
 
 var initialize = function() {
@@ -86,7 +99,7 @@ var processLine = function(line) {
  
         // for unrecognized commands
         default:
-            console.log(ERROR_DICT[0]);
+            processOutput(ERROR_DICT[0]);
             break;
     }
 };
@@ -102,7 +115,7 @@ var handleBegin = function() {
  
 var handleRollback = function() {
     if (transactions.length < 1) {
-        console.log(ERROR_DICT[2]);
+        processOutput(ERROR_DICT[2]);
         return;
     }
      
@@ -112,7 +125,7 @@ var handleRollback = function() {
  
 var handleCommit = function() {
     if (!transactions.length) {
-        console.log(ERROR_DICT[2]);
+        processOutput(ERROR_DICT[2]);
         return;
     }
     
@@ -121,7 +134,7 @@ var handleCommit = function() {
  
 var handleSet = function(args) {
     if (args.length < 2) {
-        console.log(ERROR_DICT[1]);
+        processOutput(ERROR_DICT[1]);
         return;
     }
  
@@ -133,7 +146,7 @@ var handleSet = function(args) {
 
 var handleUnset = function(args) {
     if (args.length < 1) {
-        console.log(ERROR_DICT[1]);
+        processOutput(ERROR_DICT[1]);
         return;
     }
  
@@ -144,7 +157,7 @@ var handleUnset = function(args) {
 
 var handleGet = function(args) {
     if (args.length < 1) {
-        console.log(ERROR_DICT[1]);
+        processOutput(ERROR_DICT[1]);
         return;
     }
  
@@ -155,7 +168,7 @@ var handleGet = function(args) {
 
 var handleNumequalto = function(args) {
     if (args.length < 1) {
-        console.log(ERROR_DICT[1]);
+        processOutput(ERROR_DICT[1]);
         return;
     }
  
@@ -174,7 +187,11 @@ Helper Functions
 // but can be modified later to be 
 // written to a file for example
 var processOutput = function(value) {
+    // Local Output
     console.log(value);
+
+    // Hackerrank Output
+    // process.stdout.write(value + "\n");
 };
  
 // get most recent database
